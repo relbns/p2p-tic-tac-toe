@@ -191,6 +191,47 @@
             border-radius: 10px;
             font-family: 'Courier New', monospace;
             border: 2px dashed rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .code-display:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.7);
+            transform: scale(1.02);
+        }
+
+        .code-display::after {
+            content: '📋 Tap to share';
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .connection-section.minimized {
+            max-height: 60px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .connection-section.minimized .status {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .connection-section.minimized .status::after {
+            content: ' (tap to expand)';
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .connection-section.minimized>*:not(.status) {
+            display: none !important;
         }
 
         input {
@@ -285,8 +326,13 @@
         }
 
         .cell.disabled {
-            cursor: not-allowed;
+            cursor: not-allowed !important;
             opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .cell.enabled {
+            cursor: pointer !important;
         }
 
         .cell.x {
@@ -542,6 +588,12 @@
                 this.newGameBtn.addEventListener('click', () => this.startNewGame());
                 this.disconnectBtn.addEventListener('click', () => this.disconnect());
                 this.scanQrBtn.addEventListener('click', () => this.scanQRCode());
+
+                // Code sharing
+                this.gameCodeEl.addEventListener('click', () => this.shareGameCode());
+
+                // Connection section minimize/expand
+                this.statusEl.addEventListener('click', () => this.toggleConnectionSection());
 
                 // Game board clicks
                 this.gameBoardEl.addEventListener('click', (e) => {
@@ -829,16 +881,78 @@
                 this.scanQrBtn.style.display = 'block';
             }
 
-            scanQRCode () {
-                // Simulate QR scanning for demo
-                this.updateStatus('QR scanned! Joining game...', 'connected');
-                this.isHost = false;
-                this.playerName = this.playerNameInput.value.trim() || 'Guest';
-                this.opponentName = 'Host';
-                this.playerSymbol = this.hostStarts ? 'O' : 'X';
-                this.opponentSymbol = this.hostStarts ? 'X' : 'O';
-                this.myTurn = this.playerSymbol === 'X';
-                setTimeout(() => this.startGame(), 1000);
+            async shareGameCode () {
+                const gameCode = this.gameCodeEl.textContent;
+                const shareUrl = `${window.location.origin}${window.location.pathname}`;
+                const shareText = `Join my Tic Tac Toe game! Code: ${gameCode}\n${shareUrl}`;
+
+                try {
+                    // Try native sharing first (mobile)
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: 'Join my Tic Tac Toe game!',
+                            text: `Game code: ${gameCode}`,
+                            url: shareUrl
+                        });
+                        return;
+                    }
+
+                    // Fallback to clipboard
+                    if (navigator.clipboard) {
+                        await navigator.clipboard.writeText(shareText);
+                        this.showToast('Link and code copied to clipboard! 📋');
+                    } else {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = shareText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        this.showToast('Link and code copied to clipboard! 📋');
+                    }
+                } catch (error) {
+                    console.error('Share failed:', error);
+                    this.showToast('Failed to share. Code: ' + gameCode, 'error');
+                }
+            }
+
+            showToast (message, type = 'success') {
+                // Create toast notification
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: ${type === 'error' ? 'rgba(231, 76, 60, 0.9)' : 'rgba(46, 204, 113, 0.9)'};
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    z-index: 1000;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 3000);
+            }
+
+            toggleConnectionSection () {
+                if (this.gameSection.classList.contains('active')) {
+                    const connectionSection = document.querySelector('.connection-section');
+                    connectionSection.classList.toggle('minimized');
+                }
+            }
+
+            minimizeConnectionSection () {
+                const connectionSection = document.querySelector('.connection-section');
+                connectionSection.classList.add('minimized');
             }
 
             generateQRCode (gameState) {
@@ -1046,12 +1160,20 @@
                 cells.forEach((cell, index) => {
                     const value = this.gameBoard[index];
                     cell.textContent = value;
+
+                    // Reset all classes
                     cell.className = 'cell';
+
                     if (value) {
+                        // Cell is occupied
                         cell.classList.add(value.toLowerCase());
                         cell.classList.add('disabled');
                     } else if (!this.myTurn || this.gameEnded) {
+                        // Empty cell but not my turn or game ended
                         cell.classList.add('disabled');
+                    } else {
+                        // Empty cell and my turn - explicitly enable
+                        cell.classList.add('enabled');
                     }
                 });
             }
@@ -1156,8 +1278,23 @@
                 this.updateTurnIndicator();
             }
 
+            scanQRCode () {
+                // Simulate QR scanning for demo
+                this.updateStatus('QR scanned! Joining game...', 'connected');
+                this.isHost = false;
+                this.playerName = this.playerNameInput.value.trim() || 'Guest';
+                this.opponentName = 'Host';
+                this.playerSymbol = this.hostStarts ? 'O' : 'X';
+                this.opponentSymbol = this.hostStarts ? 'X' : 'O';
+                this.myTurn = this.playerSymbol === 'X';
+                setTimeout(() => this.startGame(), 1000);
+            }
+
             startGame () {
                 this.gameSection.classList.add('active');
+
+                // Minimize connection section when game starts
+                this.minimizeConnectionSection();
 
                 // Update player display
                 if (this.isHost) {
@@ -1237,6 +1374,10 @@
                 this.qrSection.style.display = 'none';
                 this.gameSection.classList.remove('active');
                 this.codeInput.value = '';
+
+                // Expand connection section when resetting
+                const connectionSection = document.querySelector('.connection-section');
+                connectionSection.classList.remove('minimized');
 
                 // Clear method selection
                 document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('selected'));
