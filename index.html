@@ -27,50 +27,42 @@
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 30px;
+            padding: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 450px;
+            max-width: 400px;
             width: 100%;
             text-align: center;
         }
 
-        h1 {
-            margin-bottom: 30px;
-            font-size: 2rem;
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .game-title {
+            font-size: 1.2rem;
             font-weight: 700;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        .player-setup {
-            margin-bottom: 25px;
-        }
-
-        .player-name-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 15px;
-            backdrop-filter: blur(5px);
+        .connection-button {
+            background: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .player-name-input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .connection-methods {
-            margin-bottom: 30px;
-        }
-
-        .connection-methods h3 {
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.9);
+        .connection-button:hover {
+            background: rgba(255, 255, 255, 0.25);
         }
 
         .method-buttons {
@@ -117,6 +109,37 @@
             padding: 10px;
             background: rgba(0, 0, 0, 0.1);
             border-radius: 8px;
+        }
+
+        .player-setup {
+            margin-bottom: 25px;
+        }
+
+        .player-name-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .player-name-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .connection-methods {
+            margin-bottom: 30px;
+        }
+
+        .connection-methods h3 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .status {
@@ -181,57 +204,100 @@
             transform: none;
         }
 
-        .code-display {
+        h1 {
+            margin-bottom: 30px;
             font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .connection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .connection-modal {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .connection-section {
+            display: block;
+        }
+
+        .connection-section.hidden {
+            display: none;
+        }
+
+        .connection-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .code-display {
+            font-size: 1.5rem;
             font-weight: bold;
-            letter-spacing: 3px;
-            margin: 15px 0;
-            padding: 15px;
+            letter-spacing: 2px;
+            margin: 0;
+            padding: 8px 12px;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
+            border-radius: 8px;
             font-family: 'Courier New', monospace;
-            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
             transition: all 0.3s ease;
+            display: inline-block;
             position: relative;
         }
 
         .code-display:hover {
             background: rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.7);
-            transform: scale(1.02);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .code-display::after {
-            content: '📋 Tap to share';
+            content: '';
             position: absolute;
-            bottom: -25px;
+            bottom: -20px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            white-space: nowrap;
         }
 
-        .connection-section.minimized {
-            max-height: 60px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .connection-section.minimized .status {
-            margin-bottom: 0;
-            cursor: pointer;
-        }
-
-        .connection-section.minimized .status::after {
-            content: ' (tap to expand)';
-            font-size: 0.9rem;
-            opacity: 0.7;
-        }
-
-        .connection-section.minimized>*:not(.status) {
-            display: none !important;
+        .code-display:hover::after {
+            content: 'Tap to share';
         }
 
         input {
@@ -421,33 +487,41 @@
 
 <body>
     <div class="container">
-        <h1>🎮 Multi-Connection Tic Tac Toe</h1>
-
-        <div class="player-setup">
-            <input type="text" class="player-name-input" id="playerName" placeholder="Enter your name (optional)"
-                maxlength="20">
+        <!-- Game Header (always visible when connected) -->
+        <div class="game-header" id="gameHeader" style="display: none;">
+            <div class="game-title">🎮 Tic Tac Toe</div>
+            <button class="connection-button" id="connectionBtn">⚙️ Connection</button>
         </div>
 
-        <div class="connection-methods">
-            <h3>Choose Connection Method:</h3>
-            <div class="method-buttons">
-                <button class="method-btn" id="webrtcBtn">
-                    🌐 WebRTC<br><small>Internet Required</small>
-                </button>
-                <button class="method-btn" id="bluetoothBtn">
-                    📶 Bluetooth<br><small>No Internet</small>
-                </button>
-                <button class="method-btn" id="hotspotBtn">
-                    📡 WiFi Hotspot<br><small>Local Network</small>
-                </button>
-                <button class="method-btn" id="qrBtn">
-                    📱 QR Code<br><small>Pass & Play</small>
-                </button>
+        <!-- Main Title (only visible during setup) -->
+        <h1 id="mainTitle">🎮 Multi-Connection Tic Tac Toe</h1>
+
+        <!-- Connection Setup (hidden when game starts) -->
+        <div class="connection-section" id="connectionSection">
+            <div class="player-setup">
+                <input type="text" class="player-name-input" id="playerName" placeholder="Enter your name (optional)"
+                    maxlength="20">
             </div>
-            <div class="method-info" id="methodInfo">Select a connection method to see details</div>
-        </div>
 
-        <div class="connection-section">
+            <div class="connection-methods">
+                <h3>Choose Connection Method:</h3>
+                <div class="method-buttons">
+                    <button class="method-btn" id="webrtcBtn">
+                        🌐 WebRTC<br><small>Internet Required</small>
+                    </button>
+                    <button class="method-btn" id="bluetoothBtn">
+                        📶 Bluetooth<br><small>No Internet</small>
+                    </button>
+                    <button class="method-btn" id="hotspotBtn">
+                        📡 WiFi Hotspot<br><small>Local Network</small>
+                    </button>
+                    <button class="method-btn" id="qrBtn">
+                        📱 QR Code<br><small>Pass & Play</small>
+                    </button>
+                </div>
+                <div class="method-info" id="methodInfo">Select a connection method to see details</div>
+            </div>
+
             <div class="status" id="status">Select a connection method above</div>
 
             <div class="buttons" id="actionButtons" style="display: none;">
@@ -478,6 +552,15 @@
             </div>
         </div>
 
+        <!-- Connected Status (compact view when playing) -->
+        <div class="connection-info" id="connectedStatus" style="display: none;">
+            <div>
+                <span id="connectionMethod">WebRTC</span> •
+                <span class="code-display" id="connectedCode">----</span>
+            </div>
+        </div>
+
+        <!-- Game Section -->
         <div class="game-section" id="gameSection">
             <div class="players-info">
                 <div class="player-info" id="player1Info">
@@ -510,6 +593,20 @@
             <div class="buttons">
                 <button id="newGameBtn" style="display: none;">New Game</button>
                 <button id="disconnectBtn">Disconnect</button>
+            </div>
+        </div>
+
+        <!-- Connection Modal (for settings during game) -->
+        <div class="connection-overlay" id="connectionOverlay">
+            <div class="connection-modal">
+                <button class="close-modal" id="closeModal">&times;</button>
+                <h3>Connection Settings</h3>
+                <div class="connection-info">
+                    <div>Method: <span id="modalMethod">WebRTC</span></div>
+                    <div>Code: <span class="code-display" id="modalCode">----</span></div>
+                </div>
+                <div class="status" id="modalStatus">Connected</div>
+                <button id="modalDisconnect">Disconnect</button>
             </div>
         </div>
     </div>
@@ -560,6 +657,8 @@
                 this.joinDetails = document.getElementById('joinDetails');
                 this.qrCode = document.getElementById('qrCode');
                 this.scanQrBtn = document.getElementById('scanQrBtn');
+
+                // Game elements
                 this.gameSection = document.getElementById('gameSection');
                 this.player1Info = document.getElementById('player1Info');
                 this.player2Info = document.getElementById('player2Info');
@@ -572,6 +671,21 @@
                 this.gameResultEl = document.getElementById('gameResult');
                 this.newGameBtn = document.getElementById('newGameBtn');
                 this.disconnectBtn = document.getElementById('disconnectBtn');
+
+                // UI elements
+                this.mainTitle = document.getElementById('mainTitle');
+                this.gameHeader = document.getElementById('gameHeader');
+                this.connectionSection = document.getElementById('connectionSection');
+                this.connectedStatus = document.getElementById('connectedStatus');
+                this.connectedCode = document.getElementById('connectedCode');
+                this.connectionMethod = document.getElementById('connectionMethod');
+                this.connectionBtn = document.getElementById('connectionBtn');
+                this.connectionOverlay = document.getElementById('connectionOverlay');
+                this.closeModal = document.getElementById('closeModal');
+                this.modalMethod = document.getElementById('modalMethod');
+                this.modalCode = document.getElementById('modalCode');
+                this.modalStatus = document.getElementById('modalStatus');
+                this.modalDisconnect = document.getElementById('modalDisconnect');
             }
 
             setupEventListeners () {
@@ -591,9 +705,23 @@
 
                 // Code sharing
                 this.gameCodeEl.addEventListener('click', () => this.shareGameCode());
+                this.connectedCode.addEventListener('click', () => this.shareGameCode());
+                this.modalCode.addEventListener('click', () => this.shareGameCode());
 
-                // Connection section minimize/expand
-                this.statusEl.addEventListener('click', () => this.toggleConnectionSection());
+                // UI controls
+                this.connectionBtn.addEventListener('click', () => this.openConnectionModal());
+                this.closeModal.addEventListener('click', () => this.closeConnectionModal());
+                this.modalDisconnect.addEventListener('click', () => {
+                    this.closeConnectionModal();
+                    this.disconnect();
+                });
+
+                // Close modal when clicking outside
+                this.connectionOverlay.addEventListener('click', (e) => {
+                    if (e.target === this.connectionOverlay) {
+                        this.closeConnectionModal();
+                    }
+                });
 
                 // Game board clicks
                 this.gameBoardEl.addEventListener('click', (e) => {
@@ -943,18 +1071,6 @@
                 }, 3000);
             }
 
-            toggleConnectionSection () {
-                if (this.gameSection.classList.contains('active')) {
-                    const connectionSection = document.querySelector('.connection-section');
-                    connectionSection.classList.toggle('minimized');
-                }
-            }
-
-            minimizeConnectionSection () {
-                const connectionSection = document.querySelector('.connection-section');
-                connectionSection.classList.add('minimized');
-            }
-
             generateQRCode (gameState) {
                 // In a real implementation, this would generate an actual QR code
                 // For demo, we'll just show the game state
@@ -1293,8 +1409,8 @@
             startGame () {
                 this.gameSection.classList.add('active');
 
-                // Minimize connection section when game starts
-                this.minimizeConnectionSection();
+                // Switch to game mode UI
+                this.switchToGameMode();
 
                 // Update player display
                 if (this.isHost) {
@@ -1311,6 +1427,39 @@
 
                 this.updateTurnIndicator();
                 this.updateBoard();
+            }
+
+            switchToGameMode () {
+                // Hide setup UI, show game UI
+                this.mainTitle.style.display = 'none';
+                this.connectionSection.style.display = 'none';
+                this.gameHeader.style.display = 'flex';
+                this.connectedStatus.style.display = 'flex';
+
+                // Update connected status
+                const methodNames = {
+                    webrtc: 'WebRTC',
+                    bluetooth: 'Bluetooth',
+                    hotspot: 'WiFi Hotspot',
+                    qr: 'QR Code'
+                };
+
+                this.connectionMethod.textContent = methodNames[this.connectionMethod] || 'Connected';
+                this.connectedCode.textContent = this.gameCodeEl.textContent || 'LOCAL';
+
+                // Update modal info
+                this.modalMethod.textContent = methodNames[this.connectionMethod] || 'Connected';
+                this.modalCode.textContent = this.gameCodeEl.textContent || 'LOCAL';
+                this.modalStatus.textContent = 'Connected and playing';
+                this.modalStatus.className = 'status connected';
+            }
+
+            openConnectionModal () {
+                this.connectionOverlay.style.display = 'flex';
+            }
+
+            closeConnectionModal () {
+                this.connectionOverlay.style.display = 'none';
             }
 
             showHostSection (code) {
@@ -1368,16 +1517,19 @@
             }
 
             resetUI () {
+                // Reset to setup mode
+                this.mainTitle.style.display = 'block';
+                this.connectionSection.style.display = 'block';
+                this.gameHeader.style.display = 'none';
+                this.connectedStatus.style.display = 'none';
+                this.gameSection.classList.remove('active');
+
+                // Reset connection setup
                 this.enableMethodButtons();
                 this.hostSection.style.display = 'none';
                 this.joinSection.style.display = 'none';
                 this.qrSection.style.display = 'none';
-                this.gameSection.classList.remove('active');
                 this.codeInput.value = '';
-
-                // Expand connection section when resetting
-                const connectionSection = document.querySelector('.connection-section');
-                connectionSection.classList.remove('minimized');
 
                 // Clear method selection
                 document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('selected'));
@@ -1385,6 +1537,9 @@
                 this.methodInfo.textContent = 'Select a connection method to see details';
                 this.statusEl.textContent = 'Select a connection method above';
                 this.statusEl.className = 'status';
+
+                // Close modal
+                this.closeConnectionModal();
             }
 
             resetGame () {
