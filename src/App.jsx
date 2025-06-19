@@ -15,7 +15,6 @@ import {
 
 function App() {
   console.log('Deployed commit:', import.meta.env.VITE_COMMIT_SHA);
-
   // UI state
   const [gamePhase, setGamePhase] = useState('setup'); // 'setup' | 'auto-join' | 'playing'
   const [playerName, setPlayerName] = useState('');
@@ -328,7 +327,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-5">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-5 select-none">
       <div className="bg-white/15 backdrop-blur-lg rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/25">
         {/* Header */}
         <div className="text-center mb-6">
