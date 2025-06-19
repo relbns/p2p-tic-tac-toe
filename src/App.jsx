@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import GameBoard from './components/GameBoard';
 import ConnectionBadge from './components/ConnectionBadge';
 import PlayerInfo from './components/PlayerInfo';
@@ -16,6 +16,12 @@ function App() {
   const [opponentName, setOpponentName] = useState('');
   const [isLocalGame, setIsLocalGame] = useState(false);
   const [autoJoinData, setAutoJoinData] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Use refs to avoid circular dependencies
+  const isHostRef = useRef(false);
+  const playerNameRef = useRef('');
+  const hostStartsRef = useRef(true);
 
   // Initialize game logic
   const {
@@ -35,37 +41,67 @@ function App() {
     simulateOpponentMove,
   } = useGame();
 
-  // Handle messages from connection
-  const handleMessage = useCallback(
-    (data) => {
-      console.log('App received message:', data);
-      switch (data.type) {
-        case 'playerInfo':
-          setOpponentName(data.name);
-          if (isHost) {
-            sendMessage({
+  // Update refs when values change
+  useEffect(() => {
+    playerNameRef.current = playerName;
+  }, [playerName]);
+
+  useEffect(() => {
+    hostStartsRef.current = hostStarts;
+  }, [hostStarts]);
+
+  // Handle messages from connection - stable callback
+  const handleMessage = useCallback((data) => {
+    console.log('App received message:', data);
+    
+    switch (data.type) {
+      case 'playerInfo':
+        console.log('Received player info:', data);
+        setOpponentName(data.name || 'Guest');
+        
+        if (isHostRef.current) {
+          // Host receives guest info, send back game start info
+          console.log('Host sending game start info');
+          // Use timeout to ensure connection is stable
+          setTimeout(() => {
+            connectionRef.current?.sendMessage({
               type: 'gameStart',
-              hostStarts: hostStarts,
-              hostName: formatPlayerName(playerName, 'Host'),
+              hostStarts: hostStartsRef.current,
+              hostName: formatPlayerName(playerNameRef.current, 'Host'),
             });
-            setTimeout(() => startGame(), 1000);
-          }
-          break;
-        case 'gameStart':
-          setOpponentName(data.hostName);
-          setTimeout(() => startGame(), 1000);
-          break;
-        case 'move':
-          handleOpponentMove(data.index, data.symbol);
-          break;
-        case 'newGame':
-          resetGame();
-          assignPlayerSymbols(isHost, !hostStarts);
-          break;
-      }
-    },
-    [handleOpponentMove, resetGame, assignPlayerSymbols, hostStarts, playerName]
-  );
+            
+            // Start game after sending info
+            setTimeout(() => {
+              assignPlayerSymbols(true, hostStartsRef.current);
+              setGamePhase('playing');
+            }, 300);
+          }, 100);
+        }
+        break;
+        
+      case 'gameStart':
+        console.log('Received game start:', data);
+        setOpponentName(data.hostName || 'Host');
+        
+        // Guest receives game start, assign symbols and start
+        setTimeout(() => {
+          assignPlayerSymbols(false, data.hostStarts);
+          setGamePhase('playing');
+        }, 300);
+        break;
+        
+      case 'move':
+        console.log('Received move:', data);
+        handleOpponentMove(data.index, data.symbol);
+        break;
+        
+      case 'newGame':
+        console.log('Received new game request');
+        resetGame();
+        assignPlayerSymbols(isHostRef.current, !hostStartsRef.current);
+        break;
+    }
+  }, [assignPlayerSymbols, handleOpponentMove, resetGame]);
 
   // Initialize connection logic
   const {
@@ -85,7 +121,19 @@ function App() {
     disconnect: connectionDisconnect,
     shareGameCode,
     setJoinCode,
+    connectionService
   } = useConnection(handleMessage);
+
+  // Store connection service reference
+  const connectionRef = useRef(null);
+  useEffect(() => {
+    connectionRef.current = { sendMessage };
+  }, [sendMessage]);
+
+  // Update host ref when isHost changes
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
 
   // Check for query parameters on app start
   useEffect(() => {
@@ -96,21 +144,20 @@ function App() {
         method: queryParams.method
       });
       setGamePhase('auto-join');
-      // Clear query params from URL
       clearQueryParams();
     }
   }, []);
 
-  // Game actions
-  const startGame = useCallback(() => {
-    if (isLocalGame) {
-      setGamePhase('playing');
+  // Monitor connection status
+  useEffect(() => {
+    if (status.type === 'success' && status.message.includes('Connected')) {
+      setIsConnected(true);
     } else {
-      assignPlayerSymbols(isHost, hostStarts);
-      setGamePhase('playing');
+      setIsConnected(false);
     }
-  }, [assignPlayerSymbols, isHost, hostStarts, isLocalGame]);
+  }, [status]);
 
+  // Game actions
   const handleLocalGame = useCallback(() => {
     setIsLocalGame(true);
     setOpponentName('Player 2');
@@ -125,44 +172,31 @@ function App() {
         const moveSuccessful = makeMove(index, sendMessage);
 
         // If no real connection, simulate opponent move
-        if (moveSuccessful && !sendMessage({ type: 'ping' })) {
+        if (moveSuccessful && !isConnected) {
           setTimeout(() => simulateOpponentMove(gameBoard), 1000);
         }
       }
     },
-    [makeMove, makeLocalMove, sendMessage, simulateOpponentMove, gameBoard, isLocalGame]
+    [makeMove, makeLocalMove, sendMessage, simulateOpponentMove, gameBoard, isLocalGame, isConnected]
   );
 
   const handleHostGame = useCallback(async () => {
     await connectionHostGame(gameService);
-    
-    // Start connection ready timer
-    const connectionTimer = setTimeout(() => {
-      if (status.type === 'success' && status.message.includes('Share the code')) {
-        // Still waiting for connection, this is normal
-        console.log('Waiting for player to join...');
-      }
-    }, 5000);
-    
-    return () => clearTimeout(connectionTimer);
-  }, [connectionHostGame, gameService, status]);
+  }, [connectionHostGame, gameService]);
 
   const handleConnectToGame = useCallback(async () => {
     const success = await connectToGame();
     if (success) {
-      // Send player info immediately after connection
+      // Send player info immediately after connection is established
       setTimeout(() => {
+        console.log('Guest sending player info');
         sendMessage({
           type: 'playerInfo',
           name: formatPlayerName(playerName, 'Guest'),
-          hostStarts: hostStarts
         });
-        
-        setOpponentName('Host Player');
-        startGame();
       }, 1000);
     }
-  }, [connectToGame, sendMessage, playerName, hostStarts, startGame]);
+  }, [connectToGame, sendMessage, playerName]);
 
   const handleAutoJoin = useCallback(async () => {
     if (!autoJoinData) return;
@@ -171,17 +205,14 @@ function App() {
     if (success) {
       // Send player info after auto-joining
       setTimeout(() => {
+        console.log('Auto-join guest sending player info');
         sendMessage({
           type: 'playerInfo',
           name: formatPlayerName(playerName, 'Guest'),
-          hostStarts: hostStarts
         });
-        
-        setOpponentName('Host Player');
-        startGame();
       }, 1500);
     }
-  }, [autoJoinGame, autoJoinData, sendMessage, playerName, hostStarts, startGame]);
+  }, [autoJoinGame, autoJoinData, sendMessage, playerName]);
 
   const handleDeclineAutoJoin = useCallback(() => {
     setAutoJoinData(null);
@@ -192,6 +223,7 @@ function App() {
     if (isLocalGame) {
       resetGame();
     } else {
+      // Send new game message and reset locally
       sendMessage({ type: 'newGame' });
       resetGame();
       assignPlayerSymbols(isHost, !hostStarts);
@@ -208,18 +240,17 @@ function App() {
     setOpponentName('');
     setIsLocalGame(false);
     setAutoJoinData(null);
+    setIsConnected(false);
     resetGame();
   }, [connectionDisconnect, resetGame, isLocalGame]);
 
   // Handle successful connection from host side
   useEffect(() => {
-    if (isHost && status.type === 'success' && status.message.includes('Starting game')) {
-      setTimeout(() => {
-        setOpponentName('Guest Player');
-        startGame();
-      }, 500);
+    if (isHost && status.type === 'success' && status.message.includes('Player connected')) {
+      console.log('Host detected player connection');
+      setIsConnected(true);
     }
-  }, [isHost, status, startGame]);
+  }, [isHost, status]);
 
   // Helper functions for display
   const getCurrentPlayer = () => {
@@ -318,6 +349,7 @@ function App() {
             joinCode={joinCode}
             onJoinCodeChange={setJoinCode}
             onConnect={handleConnectToGame}
+            onShareCode={shareGameCode}
             status={status}
             isHosting={isHosting}
             isJoining={isJoining}

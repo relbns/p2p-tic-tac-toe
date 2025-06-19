@@ -15,7 +15,8 @@ const ConnectionSetup = ({
   status,
   isHosting,
   isJoining,
-  onLocalGame
+  onLocalGame,
+  onShareCode
 }) => (
   <div className="space-y-6">
     <input
@@ -115,10 +116,16 @@ const ConnectionSetup = ({
     {isHosting && (
       <div className="text-center space-y-4">
         <p className="text-lg text-white font-medium">Share this code with your friend:</p>
-        <div className="text-4xl font-bold font-mono tracking-widest p-4 bg-black/20 rounded-xl border-2 border-dashed border-white/50 cursor-pointer hover:bg-black/30 transition-all text-white">
+        <div 
+          onClick={onShareCode}
+          className="text-4xl font-bold font-mono tracking-widest p-4 bg-black/25 rounded-xl border-2 border-dashed border-white/50 cursor-pointer hover:bg-black/35 hover:border-white/70 transition-all text-white transform hover:scale-105"
+        >
           {gameCode}
         </div>
-        <p className="text-sm text-white/70">Tap to share</p>
+        <p className="text-sm text-white/70">👆 Tap to share URL with game code</p>
+        <div className="text-xs text-white/60 bg-white/10 rounded-lg p-2 border border-white/20">
+          Share the URL and your friend can join with one click!
+        </div>
       </div>
     )}
 

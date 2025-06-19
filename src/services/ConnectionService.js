@@ -6,6 +6,7 @@ export class ConnectionService {
     this.onMessage = onMessage;
     this.onStatusChange = onStatusChange;
     this.isHost = false;
+    this.isConnected = false;
   }
 
   async loadPeerJS() {
@@ -57,7 +58,7 @@ export class ConnectionService {
             { urls: 'stun:stun1.l.google.com:19302' }
           ]
         },
-        debug: 2
+        debug: 1
       });
 
       const timeout = setTimeout(() => {
@@ -69,12 +70,12 @@ export class ConnectionService {
 
       this.peer.on('open', (id) => {
         clearTimeout(timeout);
-        console.log('Peer opened with ID:', id);
+        console.log('Host peer opened with ID:', id);
         this.onStatusChange('Game room created! Share the code with your friend.', 'success');
       });
 
       this.peer.on('connection', (conn) => {
-        console.log('Incoming connection:', conn);
+        console.log('Host: Incoming connection from:', conn.peer);
         this.connection = conn;
         this.setupConnection();
         this.onStatusChange('Player connected! Starting game...', 'success');
@@ -82,7 +83,7 @@ export class ConnectionService {
 
       this.peer.on('error', (err) => {
         clearTimeout(timeout);
-        console.error('Peer error:', err);
+        console.error('Host peer error:', err);
         this.onStatusChange(`WebRTC error: ${err.type || 'Connection failed'}`, 'error');
       });
 
@@ -106,7 +107,7 @@ export class ConnectionService {
             { urls: 'stun:stun1.l.google.com:19302' }
           ]
         },
-        debug: 2
+        debug: 1
       });
 
       const timeout = setTimeout(() => {
@@ -118,15 +119,22 @@ export class ConnectionService {
       
       this.peer.on('open', (id) => {
         clearTimeout(timeout);
-        console.log('Peer opened with ID:', id, 'connecting to:', gameCode);
-        this.connection = this.peer.connect(gameCode, { reliable: true });
+        console.log('Guest peer opened with ID:', id, 'connecting to:', gameCode);
+        this.connection = this.peer.connect(gameCode, { 
+          reliable: true,
+          serialization: 'json'
+        });
         this.setupConnection();
       });
 
       this.peer.on('error', (err) => {
         clearTimeout(timeout);
-        console.error('Join error:', err);
-        this.onStatusChange(`Failed to connect: ${err.type || 'Check the code'}`, 'error');
+        console.error('Guest peer error:', err);
+        if (err.type === 'peer-unavailable') {
+          this.onStatusChange('Game room not found. Check the code.', 'error');
+        } else {
+          this.onStatusChange(`Failed to connect: ${err.type || 'Check the code'}`, 'error');
+        }
       });
 
     } catch (error) {
@@ -136,58 +144,68 @@ export class ConnectionService {
   }
 
   setupConnection() {
-    if (!this.connection) return;
+    if (!this.connection) {
+      console.error('No connection to setup');
+      return;
+    }
 
     console.log('Setting up connection...');
 
     this.connection.on('open', () => {
       console.log('Connection opened successfully');
+      this.isConnected = true;
       this.onStatusChange('Connected! Starting game...', 'success');
-      
-      // Exchange player info immediately
-      if (this.onMessage) {
-        // Small delay to ensure both sides are ready
-        setTimeout(() => {
-          this.onMessage({ type: 'connectionReady' });
-        }, 500);
-      }
     });
 
     this.connection.on('data', (data) => {
       console.log('Received data:', data);
-      if (this.onMessage) {
+      if (this.onMessage && this.isConnected) {
         this.onMessage(data);
       }
     });
 
     this.connection.on('close', () => {
       console.log('Connection closed');
+      this.isConnected = false;
       this.onStatusChange('Connection lost', 'error');
     });
 
     this.connection.on('error', (err) => {
       console.error('Connection error:', err);
+      this.isConnected = false;
       this.onStatusChange('Connection error: ' + err.message, 'error');
     });
   }
 
   sendMessage(message) {
-    if (this.connection && this.connection.open) {
+    if (this.connection && this.connection.open && this.isConnected) {
       console.log('Sending message:', message);
-      this.connection.send(message);
-      return true;
+      try {
+        this.connection.send(message);
+        return true;
+      } catch (error) {
+        console.error('Failed to send message:', error);
+        return false;
+      }
     }
-    console.warn('Cannot send message - connection not ready');
+    console.warn('Cannot send message - connection not ready. Connected:', this.isConnected, 'Open:', this.connection?.open);
     return false;
   }
 
   disconnect() {
     console.log('Disconnecting...');
+    this.isConnected = false;
+    
+    if (this.connection) {
+      this.connection.close();
+      this.connection = null;
+    }
+    
     if (this.peer) {
       this.peer.destroy();
       this.peer = null;
     }
-    this.connection = null;
+    
     this.isHost = false;
   }
 }

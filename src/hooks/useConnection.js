@@ -1,7 +1,7 @@
 // src/hooks/useConnection.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConnectionService } from '../services/ConnectionService';
-import { generateShareUrl } from '../utils/helpers';
+import { generateShareUrl, showToast } from '../utils/helpers';
 
 export const useConnection = (onMessage) => {
   const [connectionService, setConnectionService] = useState(null);
@@ -13,17 +13,22 @@ export const useConnection = (onMessage) => {
   const [joinCode, setJoinCode] = useState('');
   const [status, setStatus] = useState({ message: 'Select a connection method above', type: '' });
 
+  // Use ref to store the latest onMessage callback without causing re-renders
+  const onMessageRef = useRef(onMessage);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
   // Initialize connection service
   useEffect(() => {
     const handleMessage = (data) => {
       console.log('Connection hook received message:', data);
       if (data.type === 'connectionReady') {
-        // Handle connection ready event
         console.log('Connection is ready for game messages');
         return;
       }
-      if (onMessage) {
-        onMessage(data);
+      if (onMessageRef.current) {
+        onMessageRef.current(data);
       }
     };
 
@@ -38,7 +43,7 @@ export const useConnection = (onMessage) => {
     return () => {
       service.disconnect();
     };
-  }, [onMessage]);
+  }, []); // Remove onMessage from dependencies
 
   const selectMethod = useCallback((method) => {
     setSelectedMethod(method);
@@ -119,8 +124,13 @@ export const useConnection = (onMessage) => {
   }, [connectionService]);
 
   const shareGameCode = useCallback(async () => {
+    if (!gameCode || !selectedMethod) {
+      showToast('No game code to share', 'error');
+      return;
+    }
+
     const shareUrl = generateShareUrl(gameCode, selectedMethod);
-    const shareText = `Join my Tic Tac Toe game! Code: ${gameCode}\n${shareUrl}`;
+    const shareText = `Join my Tic Tac Toe game!\nCode: ${gameCode}\n${shareUrl}`;
     
     try {
       if (navigator.share) {
@@ -129,13 +139,23 @@ export const useConnection = (onMessage) => {
           text: `Game code: ${gameCode}`,
           url: shareUrl
         });
+        showToast('Game shared successfully! 📤');
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(shareUrl);
-        // You could add a toast notification here
-        console.log('Share URL copied to clipboard!');
+        showToast('Game URL copied to clipboard! 📋');
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast('Game URL copied to clipboard! 📋');
       }
     } catch (error) {
       console.error('Failed to share:', error);
+      showToast('Failed to share game', 'error');
     }
   }, [gameCode, selectedMethod]);
 
@@ -155,6 +175,7 @@ export const useConnection = (onMessage) => {
     sendMessage,
     disconnect,
     shareGameCode,
-    setJoinCode
+    setJoinCode,
+    connectionService
   };
 };
