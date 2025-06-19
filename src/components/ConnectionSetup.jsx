@@ -14,6 +14,7 @@ const ConnectionSetup = ({
   status,
   isHosting,
   isJoining,
+  onLocalGame
 }) => (
   <div className="space-y-6">
     <input
@@ -27,8 +28,26 @@ const ConnectionSetup = ({
 
     <div>
       <h3 className="text-xl font-semibold mb-4 text-white/90">
-        Choose Connection Method:
+        Choose Game Mode:
       </h3>
+      
+      {/* Quick Start Local Game */}
+      <div className="mb-6">
+        <button
+          onClick={onLocalGame}
+          className="w-full p-4 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 font-bold text-white transition-all transform hover:scale-[1.02] shadow-lg"
+        >
+          🎮 Local Game (Same Device)
+          <div className="text-sm font-normal opacity-90 mt-1">
+            Play with someone next to you
+          </div>
+        </button>
+      </div>
+
+      <div className="text-center text-white/60 text-sm mb-4">
+        OR connect with remote players:
+      </div>
+
       <div className="grid grid-cols-2 gap-3 mb-5">
         {[
           { id: 'webrtc', label: '🌐 WebRTC', subtitle: 'Internet Required' },

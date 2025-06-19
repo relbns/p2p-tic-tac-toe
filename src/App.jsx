@@ -13,6 +13,7 @@ function App() {
   const [gamePhase, setGamePhase] = useState('setup'); // 'setup' | 'playing'
   const [playerName, setPlayerName] = useState('');
   const [opponentName, setOpponentName] = useState('');
+  const [isLocalGame, setIsLocalGame] = useState(false);
 
   // Initialize game logic
   const {
@@ -26,6 +27,7 @@ function App() {
     hostStarts,
     assignPlayerSymbols,
     makeMove,
+    makeLocalMove,
     handleOpponentMove,
     resetGame,
     simulateOpponentMove,
@@ -76,20 +78,35 @@ function App() {
 
   // Game actions
   const startGame = useCallback(() => {
-    assignPlayerSymbols(isHost, hostStarts);
+    if (isLocalGame) {
+      // For local games, player 1 is always X and goes first
+      setGamePhase('playing');
+    } else {
+      assignPlayerSymbols(isHost, hostStarts);
+      setGamePhase('playing');
+    }
+  }, [assignPlayerSymbols, isHost, hostStarts, isLocalGame]);
+
+  const handleLocalGame = useCallback(() => {
+    setIsLocalGame(true);
+    setOpponentName('Player 2');
     setGamePhase('playing');
-  }, [assignPlayerSymbols, isHost, hostStarts]);
+  }, []);
 
   const handleCellClick = useCallback(
     (index) => {
-      const moveSuccessful = makeMove(index, sendMessage);
+      if (isLocalGame) {
+        makeLocalMove(index);
+      } else {
+        const moveSuccessful = makeMove(index, sendMessage);
 
-      // If no real connection, simulate opponent move
-      if (moveSuccessful && !sendMessage({ type: 'ping' })) {
-        setTimeout(() => simulateOpponentMove(gameBoard), 1000);
+        // If no real connection, simulate opponent move
+        if (moveSuccessful && !sendMessage({ type: 'ping' })) {
+          setTimeout(() => simulateOpponentMove(gameBoard), 1000);
+        }
       }
     },
-    [makeMove, sendMessage, simulateOpponentMove, gameBoard]
+    [makeMove, makeLocalMove, sendMessage, simulateOpponentMove, gameBoard, isLocalGame]
   );
 
   const handleHostGame = useCallback(async () => {
@@ -113,23 +130,34 @@ function App() {
   }, [connectToGame, startGame]);
 
   const handleNewGame = useCallback(() => {
-    sendMessage({ type: 'newGame' });
-    resetGame();
-    assignPlayerSymbols(isHost, !hostStarts);
-  }, [sendMessage, resetGame, assignPlayerSymbols, isHost, hostStarts]);
+    if (isLocalGame) {
+      resetGame();
+    } else {
+      sendMessage({ type: 'newGame' });
+      resetGame();
+      assignPlayerSymbols(isHost, !hostStarts);
+    }
+  }, [sendMessage, resetGame, assignPlayerSymbols, isHost, hostStarts, isLocalGame]);
 
   const handleDisconnect = useCallback(() => {
-    connectionDisconnect();
+    if (!isLocalGame) {
+      connectionDisconnect();
+    }
 
     // Reset all state
     setGamePhase('setup');
     setOpponentName('');
+    setIsLocalGame(false);
     resetGame();
-  }, [connectionDisconnect, resetGame]);
+  }, [connectionDisconnect, resetGame, isLocalGame]);
 
   // Helper functions for display
   const getCurrentPlayer = () => {
     if (gameEnded) return 0;
+    if (isLocalGame) {
+      // For local games, X is player 1, O is player 2
+      return myTurn ? 1 : 2;
+    }
     if (isHost) {
       return myTurn ? 1 : 2;
     } else {
@@ -139,18 +167,37 @@ function App() {
 
   const getTurnIndicator = () => {
     if (gameEnded) return 'Game Over';
+    if (isLocalGame) {
+      return myTurn ? "Player 1's turn (X)" : "Player 2's turn (O)";
+    }
     return myTurn ? 'Your turn' : `${opponentName}'s turn`;
   };
 
-  const getPlayer1 = () => ({
-    name: isHost ? formatPlayerName(playerName, 'Host') : opponentName,
-    symbol: isHost ? playerSymbol : opponentSymbol,
-  });
+  const getPlayer1 = () => {
+    if (isLocalGame) {
+      return {
+        name: formatPlayerName(playerName, 'Player 1'),
+        symbol: 'X'
+      };
+    }
+    return {
+      name: isHost ? formatPlayerName(playerName, 'Host') : opponentName,
+      symbol: isHost ? playerSymbol : opponentSymbol,
+    };
+  };
 
-  const getPlayer2 = () => ({
-    name: isHost ? opponentName : formatPlayerName(playerName, 'Guest'),
-    symbol: isHost ? opponentSymbol : playerSymbol,
-  });
+  const getPlayer2 = () => {
+    if (isLocalGame) {
+      return {
+        name: 'Player 2',
+        symbol: 'O'
+      };
+    }
+    return {
+      name: isHost ? opponentName : formatPlayerName(playerName, 'Guest'),
+      symbol: isHost ? opponentSymbol : playerSymbol,
+    };
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-5">
@@ -161,12 +208,18 @@ function App() {
             🎮 Tic Tac Toe
           </h1>
 
-          {gamePhase === 'playing' && (
+          {gamePhase === 'playing' && !isLocalGame && (
             <ConnectionBadge
               method={selectedMethod}
               code={gameCode}
               onShare={shareGameCode}
             />
+          )}
+
+          {gamePhase === 'playing' && isLocalGame && (
+            <div className="inline-block px-4 py-2 bg-purple-500/20 border border-purple-500/50 rounded-full text-sm mb-2">
+              🏠 Local Game
+            </div>
           )}
         </div>
 
@@ -177,6 +230,7 @@ function App() {
             onMethodSelect={selectMethod}
             onHost={handleHostGame}
             onJoin={joinGame}
+            onLocalGame={handleLocalGame}
             playerName={playerName}
             onPlayerNameChange={setPlayerName}
             gameCode={gameCode}
@@ -196,7 +250,7 @@ function App() {
               player1={getPlayer1()}
               player2={getPlayer2()}
               currentPlayer={getCurrentPlayer()}
-              isHost={isHost}
+              isHost={isLocalGame ? true : isHost}
             />
 
             <div className="text-center">
@@ -212,9 +266,9 @@ function App() {
             <GameBoard
               board={gameBoard}
               onCellClick={handleCellClick}
-              myTurn={myTurn}
+              myTurn={isLocalGame ? true : myTurn} // In local game, always allow moves
               gameEnded={gameEnded}
-              playerSymbol={playerSymbol}
+              playerSymbol={isLocalGame ? (myTurn ? 'X' : 'O') : playerSymbol}
             />
 
             {gameResult && (
@@ -222,6 +276,8 @@ function App() {
                 <div className="text-2xl font-bold">
                   {gameResult.type === 'tie'
                     ? "🤝 It's a Tie!"
+                    : isLocalGame
+                    ? `🎉 ${gameResult.winner === 'X' ? 'Player 1' : 'Player 2'} Wins!`
                     : gameResult.isPlayerWin
                     ? '🎉 You Win!'
                     : `😔 ${opponentName} Wins!`}
@@ -242,11 +298,16 @@ function App() {
                 onClick={handleDisconnect}
                 className="flex-1 p-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 font-semibold transition-all"
               >
-                Disconnect
+                {isLocalGame ? 'Back to Menu' : 'Disconnect'}
               </button>
             </div>
           </div>
         )}
+
+        {/* Copyright */}
+        <div className="text-center mt-6 text-white/40 text-xs">
+          © {new Date().getFullYear()} @relbns - Open Source
+        </div>
       </div>
     </div>
   );
