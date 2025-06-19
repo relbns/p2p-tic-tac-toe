@@ -1,4 +1,6 @@
-# 🎮 Multi-Connection Tic Tac Toe
+# 🎮 Multi-Connection Tic Tac Toe 
+![Deploy](https://github.com/relbns/p2p-tic-tac-toe/actions/workflows/deploy.yml/badge.svg)
+
 
 A revolutionary peer-to-peer Tic Tac Toe game that works **anywhere, anytime** - with or without internet! Choose from multiple connection methods based on your situation, or play locally on the same device.
 
