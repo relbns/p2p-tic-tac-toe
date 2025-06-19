@@ -76,6 +76,9 @@ export const useConnection = (onMessage) => {
       return false;
     }
 
+    // Store the game code for guests too
+    setGameCode(code);
+
     if (selectedMethod === 'webrtc' && connectionService) {
       await connectionService.joinGame(code);
       return true;
@@ -91,6 +94,9 @@ export const useConnection = (onMessage) => {
     setIsHost(false);
     setIsJoining(true);
     setJoinCode(code);
+    
+    // Store the game code for auto-join guests too
+    setGameCode(code);
     
     if (method === 'webrtc' && connectionService) {
       await connectionService.joinGame(code);
@@ -129,6 +135,12 @@ export const useConnection = (onMessage) => {
       return;
     }
 
+    // Only hosts can share the game
+    if (!isHost) {
+      showToast('Only the host can share the game room', 'error');
+      return;
+    }
+
     const shareUrl = generateShareUrl(gameCode, selectedMethod);
     const shareText = `Join my Tic Tac Toe game!\nCode: ${gameCode}\n${shareUrl}`;
     
@@ -157,7 +169,7 @@ export const useConnection = (onMessage) => {
       console.error('Failed to share:', error);
       showToast('Failed to share game', 'error');
     }
-  }, [gameCode, selectedMethod]);
+  }, [gameCode, selectedMethod, isHost]);
 
   return {
     selectedMethod,

@@ -313,6 +313,7 @@ function App() {
               method={selectedMethod}
               code={gameCode}
               onShare={shareGameCode}
+              isHost={isHost}
             />
           )}
 
