@@ -7,9 +7,15 @@ import ConnectionSetup from './components/ConnectionSetup';
 import AutoJoinPrompt from './components/AutoJoinPrompt';
 import { useGame } from './hooks/useGame';
 import { useConnection } from './hooks/useConnection';
-import { formatPlayerName, getQueryParams, clearQueryParams } from './utils/helpers';
+import {
+  formatPlayerName,
+  getQueryParams,
+  clearQueryParams,
+} from './utils/helpers';
 
 function App() {
+  console.log('Deployed commit:', import.meta.env.VITE_COMMIT_SHA);
+
   // UI state
   const [gamePhase, setGamePhase] = useState('setup'); // 'setup' | 'auto-join' | 'playing'
   const [playerName, setPlayerName] = useState('');
@@ -51,57 +57,60 @@ function App() {
   }, [hostStarts]);
 
   // Handle messages from connection - stable callback
-  const handleMessage = useCallback((data) => {
-    console.log('App received message:', data);
-    
-    switch (data.type) {
-      case 'playerInfo':
-        console.log('Received player info:', data);
-        setOpponentName(data.name || 'Guest');
-        
-        if (isHostRef.current) {
-          // Host receives guest info, send back game start info
-          console.log('Host sending game start info');
-          // Use timeout to ensure connection is stable
-          setTimeout(() => {
-            connectionRef.current?.sendMessage({
-              type: 'gameStart',
-              hostStarts: hostStartsRef.current,
-              hostName: formatPlayerName(playerNameRef.current, 'Host'),
-            });
-            
-            // Start game after sending info
+  const handleMessage = useCallback(
+    (data) => {
+      console.log('App received message:', data);
+
+      switch (data.type) {
+        case 'playerInfo':
+          console.log('Received player info:', data);
+          setOpponentName(data.name || 'Guest');
+
+          if (isHostRef.current) {
+            // Host receives guest info, send back game start info
+            console.log('Host sending game start info');
+            // Use timeout to ensure connection is stable
             setTimeout(() => {
-              assignPlayerSymbols(true, hostStartsRef.current);
-              setGamePhase('playing');
-            }, 300);
-          }, 100);
-        }
-        break;
-        
-      case 'gameStart':
-        console.log('Received game start:', data);
-        setOpponentName(data.hostName || 'Host');
-        
-        // Guest receives game start, assign symbols and start
-        setTimeout(() => {
-          assignPlayerSymbols(false, data.hostStarts);
-          setGamePhase('playing');
-        }, 300);
-        break;
-        
-      case 'move':
-        console.log('Received move:', data);
-        handleOpponentMove(data.index, data.symbol);
-        break;
-        
-      case 'newGame':
-        console.log('Received new game request');
-        resetGame();
-        assignPlayerSymbols(isHostRef.current, !hostStartsRef.current);
-        break;
-    }
-  }, [assignPlayerSymbols, handleOpponentMove, resetGame]);
+              connectionRef.current?.sendMessage({
+                type: 'gameStart',
+                hostStarts: hostStartsRef.current,
+                hostName: formatPlayerName(playerNameRef.current, 'Host'),
+              });
+
+              // Start game after sending info
+              setTimeout(() => {
+                assignPlayerSymbols(true, hostStartsRef.current);
+                setGamePhase('playing');
+              }, 300);
+            }, 100);
+          }
+          break;
+
+        case 'gameStart':
+          console.log('Received game start:', data);
+          setOpponentName(data.hostName || 'Host');
+
+          // Guest receives game start, assign symbols and start
+          setTimeout(() => {
+            assignPlayerSymbols(false, data.hostStarts);
+            setGamePhase('playing');
+          }, 300);
+          break;
+
+        case 'move':
+          console.log('Received move:', data);
+          handleOpponentMove(data.index, data.symbol);
+          break;
+
+        case 'newGame':
+          console.log('Received new game request');
+          resetGame();
+          assignPlayerSymbols(isHostRef.current, !hostStartsRef.current);
+          break;
+      }
+    },
+    [assignPlayerSymbols, handleOpponentMove, resetGame]
+  );
 
   // Initialize connection logic
   const {
@@ -121,7 +130,7 @@ function App() {
     disconnect: connectionDisconnect,
     shareGameCode,
     setJoinCode,
-    connectionService
+    connectionService,
   } = useConnection(handleMessage);
 
   // Store connection service reference
@@ -141,7 +150,7 @@ function App() {
     if (queryParams.code && queryParams.code.length === 4) {
       setAutoJoinData({
         code: queryParams.code,
-        method: queryParams.method
+        method: queryParams.method,
       });
       setGamePhase('auto-join');
       clearQueryParams();
@@ -177,7 +186,15 @@ function App() {
         }
       }
     },
-    [makeMove, makeLocalMove, sendMessage, simulateOpponentMove, gameBoard, isLocalGame, isConnected]
+    [
+      makeMove,
+      makeLocalMove,
+      sendMessage,
+      simulateOpponentMove,
+      gameBoard,
+      isLocalGame,
+      isConnected,
+    ]
   );
 
   const handleHostGame = useCallback(async () => {
@@ -200,7 +217,7 @@ function App() {
 
   const handleAutoJoin = useCallback(async () => {
     if (!autoJoinData) return;
-    
+
     const success = await autoJoinGame(autoJoinData.code, autoJoinData.method);
     if (success) {
       // Send player info after auto-joining
@@ -228,7 +245,14 @@ function App() {
       resetGame();
       assignPlayerSymbols(isHost, !hostStarts);
     }
-  }, [sendMessage, resetGame, assignPlayerSymbols, isHost, hostStarts, isLocalGame]);
+  }, [
+    sendMessage,
+    resetGame,
+    assignPlayerSymbols,
+    isHost,
+    hostStarts,
+    isLocalGame,
+  ]);
 
   const handleDisconnect = useCallback(() => {
     if (!isLocalGame) {
@@ -246,7 +270,11 @@ function App() {
 
   // Handle successful connection from host side
   useEffect(() => {
-    if (isHost && status.type === 'success' && status.message.includes('Player connected')) {
+    if (
+      isHost &&
+      status.type === 'success' &&
+      status.message.includes('Player connected')
+    ) {
       console.log('Host detected player connection');
       setIsConnected(true);
     }
@@ -277,7 +305,7 @@ function App() {
     if (isLocalGame) {
       return {
         name: formatPlayerName(playerName, 'Player 1'),
-        symbol: 'X'
+        symbol: 'X',
       };
     }
     return {
@@ -290,7 +318,7 @@ function App() {
     if (isLocalGame) {
       return {
         name: 'Player 2',
-        symbol: 'O'
+        symbol: 'O',
       };
     }
     return {
@@ -391,7 +419,9 @@ function App() {
                   {gameResult.type === 'tie'
                     ? "🤝 It's a Tie!"
                     : isLocalGame
-                    ? `🎉 ${gameResult.winner === 'X' ? 'Player 1' : 'Player 2'} Wins!`
+                    ? `🎉 ${
+                        gameResult.winner === 'X' ? 'Player 1' : 'Player 2'
+                      } Wins!`
                     : gameResult.isPlayerWin
                     ? '🎉 You Win!'
                     : `😔 ${opponentName} Wins!`}
