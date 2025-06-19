@@ -6,6 +6,7 @@
   "homepage": "https://relbns.github.io/p2p-tic-tac-toe",
   "scripts": {
     "dev": "vite --host",
+    "prebuild": "echo VITE_COMMIT_SHA=$(git rev-parse --short HEAD) > .env",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

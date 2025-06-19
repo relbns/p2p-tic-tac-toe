@@ -1,19 +1,25 @@
 // src/App.jsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import GameBoard from './components/GameBoard';
 import ConnectionBadge from './components/ConnectionBadge';
 import PlayerInfo from './components/PlayerInfo';
 import ConnectionSetup from './components/ConnectionSetup';
+import AutoJoinPrompt from './components/AutoJoinPrompt';
 import { useGame } from './hooks/useGame';
 import { useConnection } from './hooks/useConnection';
-import { formatPlayerName } from './utils/helpers';
+import {
+  formatPlayerName,
+  getQueryParams,
+  clearQueryParams,
+} from './utils/helpers';
 
 function App() {
   // UI state
-  const [gamePhase, setGamePhase] = useState('setup'); // 'setup' | 'playing'
+  const [gamePhase, setGamePhase] = useState('setup'); // 'setup' | 'auto-join' | 'playing'
   const [playerName, setPlayerName] = useState('');
   const [opponentName, setOpponentName] = useState('');
   const [isLocalGame, setIsLocalGame] = useState(false);
+  const [autoJoinData, setAutoJoinData] = useState(null);
 
   // Initialize game logic
   const {
@@ -36,10 +42,18 @@ function App() {
   // Handle messages from connection
   const handleMessage = useCallback(
     (data) => {
+      console.log('App received message:', data);
       switch (data.type) {
         case 'playerInfo':
           setOpponentName(data.name);
-          // We'll handle this after connection is established
+          if (isHost) {
+            sendMessage({
+              type: 'gameStart',
+              hostStarts: hostStarts,
+              hostName: formatPlayerName(playerName, 'Host'),
+            });
+            setTimeout(() => startGame(), 1000);
+          }
           break;
         case 'gameStart':
           setOpponentName(data.hostName);
@@ -50,11 +64,11 @@ function App() {
           break;
         case 'newGame':
           resetGame();
-          // assignPlayerSymbols will be called after connection details are available
+          assignPlayerSymbols(isHost, !hostStarts);
           break;
       }
     },
-    [handleOpponentMove, resetGame]
+    [handleOpponentMove, resetGame, assignPlayerSymbols, hostStarts, playerName]
   );
 
   // Initialize connection logic
@@ -70,16 +84,30 @@ function App() {
     hostGame: connectionHostGame,
     joinGame,
     connectToGame,
+    autoJoinGame,
     sendMessage,
     disconnect: connectionDisconnect,
     shareGameCode,
     setJoinCode,
   } = useConnection(handleMessage);
 
+  // Check for query parameters on app start
+  useEffect(() => {
+    const queryParams = getQueryParams();
+    if (queryParams.code && queryParams.code.length === 4) {
+      setAutoJoinData({
+        code: queryParams.code,
+        method: queryParams.method,
+      });
+      setGamePhase('auto-join');
+      // Clear query params from URL
+      clearQueryParams();
+    }
+  }, []);
+
   // Game actions
   const startGame = useCallback(() => {
     if (isLocalGame) {
-      // For local games, player 1 is always X and goes first
       setGamePhase('playing');
     } else {
       assignPlayerSymbols(isHost, hostStarts);
@@ -106,28 +134,80 @@ function App() {
         }
       }
     },
-    [makeMove, makeLocalMove, sendMessage, simulateOpponentMove, gameBoard, isLocalGame]
+    [
+      makeMove,
+      makeLocalMove,
+      sendMessage,
+      simulateOpponentMove,
+      gameBoard,
+      isLocalGame,
+    ]
   );
 
   const handleHostGame = useCallback(async () => {
     await connectionHostGame(gameService);
 
-    // For demo purposes, simulate connection after a delay
-    setTimeout(() => {
-      setOpponentName('Guest Player');
-      startGame();
-    }, 3000);
-  }, [connectionHostGame, gameService, startGame]);
+    // Start connection ready timer
+    const connectionTimer = setTimeout(() => {
+      if (
+        status.type === 'success' &&
+        status.message.includes('Share the code')
+      ) {
+        // Still waiting for connection, this is normal
+        console.log('Waiting for player to join...');
+      }
+    }, 5000);
+
+    return () => clearTimeout(connectionTimer);
+  }, [connectionHostGame, gameService, status]);
 
   const handleConnectToGame = useCallback(async () => {
-    await connectToGame();
+    const success = await connectToGame();
+    if (success) {
+      // Send player info immediately after connection
+      setTimeout(() => {
+        sendMessage({
+          type: 'playerInfo',
+          name: formatPlayerName(playerName, 'Guest'),
+          hostStarts: hostStarts,
+        });
 
-    // For demo purposes, simulate connection after a delay
-    setTimeout(() => {
-      setOpponentName('Host Player');
-      startGame();
-    }, 1000);
-  }, [connectToGame, startGame]);
+        setOpponentName('Host Player');
+        startGame();
+      }, 1000);
+    }
+  }, [connectToGame, sendMessage, playerName, hostStarts, startGame]);
+
+  const handleAutoJoin = useCallback(async () => {
+    if (!autoJoinData) return;
+
+    const success = await autoJoinGame(autoJoinData.code, autoJoinData.method);
+    if (success) {
+      // Send player info after auto-joining
+      setTimeout(() => {
+        sendMessage({
+          type: 'playerInfo',
+          name: formatPlayerName(playerName, 'Guest'),
+          hostStarts: hostStarts,
+        });
+
+        setOpponentName('Host Player');
+        startGame();
+      }, 1500);
+    }
+  }, [
+    autoJoinGame,
+    autoJoinData,
+    sendMessage,
+    playerName,
+    hostStarts,
+    startGame,
+  ]);
+
+  const handleDeclineAutoJoin = useCallback(() => {
+    setAutoJoinData(null);
+    setGamePhase('setup');
+  }, []);
 
   const handleNewGame = useCallback(() => {
     if (isLocalGame) {
@@ -137,7 +217,14 @@ function App() {
       resetGame();
       assignPlayerSymbols(isHost, !hostStarts);
     }
-  }, [sendMessage, resetGame, assignPlayerSymbols, isHost, hostStarts, isLocalGame]);
+  }, [
+    sendMessage,
+    resetGame,
+    assignPlayerSymbols,
+    isHost,
+    hostStarts,
+    isLocalGame,
+  ]);
 
   const handleDisconnect = useCallback(() => {
     if (!isLocalGame) {
@@ -148,14 +235,28 @@ function App() {
     setGamePhase('setup');
     setOpponentName('');
     setIsLocalGame(false);
+    setAutoJoinData(null);
     resetGame();
   }, [connectionDisconnect, resetGame, isLocalGame]);
+
+  // Handle successful connection from host side
+  useEffect(() => {
+    if (
+      isHost &&
+      status.type === 'success' &&
+      status.message.includes('Starting game')
+    ) {
+      setTimeout(() => {
+        setOpponentName('Guest Player');
+        startGame();
+      }, 500);
+    }
+  }, [isHost, status, startGame]);
 
   // Helper functions for display
   const getCurrentPlayer = () => {
     if (gameEnded) return 0;
     if (isLocalGame) {
-      // For local games, X is player 1, O is player 2
       return myTurn ? 1 : 2;
     }
     if (isHost) {
@@ -177,7 +278,7 @@ function App() {
     if (isLocalGame) {
       return {
         name: formatPlayerName(playerName, 'Player 1'),
-        symbol: 'X'
+        symbol: 'X',
       };
     }
     return {
@@ -190,7 +291,7 @@ function App() {
     if (isLocalGame) {
       return {
         name: 'Player 2',
-        symbol: 'O'
+        symbol: 'O',
       };
     }
     return {
@@ -198,6 +299,8 @@ function App() {
       symbol: isHost ? opponentSymbol : playerSymbol,
     };
   };
+
+  console.log('Deployed commit:', import.meta.env.VITE_COMMIT_SHA);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-5">
@@ -222,6 +325,18 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* Auto Join Phase */}
+        {gamePhase === 'auto-join' && autoJoinData && (
+          <AutoJoinPrompt
+            gameCode={autoJoinData.code}
+            method={autoJoinData.method}
+            onJoin={handleAutoJoin}
+            onDecline={handleDeclineAutoJoin}
+            playerName={playerName}
+            onPlayerNameChange={setPlayerName}
+          />
+        )}
 
         {/* Setup Phase */}
         {gamePhase === 'setup' && (
@@ -277,7 +392,9 @@ function App() {
                   {gameResult.type === 'tie'
                     ? "🤝 It's a Tie!"
                     : isLocalGame
-                    ? `🎉 ${gameResult.winner === 'X' ? 'Player 1' : 'Player 2'} Wins!`
+                    ? `🎉 ${
+                        gameResult.winner === 'X' ? 'Player 1' : 'Player 2'
+                      } Wins!`
                     : gameResult.isPlayerWin
                     ? '🎉 You Win!'
                     : `😔 ${opponentName} Wins!`}
@@ -306,7 +423,7 @@ function App() {
 
         {/* Copyright */}
         <div className="text-center mt-6 text-white/40 text-xs">
-          © {new Date().getFullYear()} @relbns - Open Source
+          © 2024 @relbns - Open Source
         </div>
       </div>
     </div>
