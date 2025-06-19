@@ -7,11 +7,7 @@ import ConnectionSetup from './components/ConnectionSetup';
 import AutoJoinPrompt from './components/AutoJoinPrompt';
 import { useGame } from './hooks/useGame';
 import { useConnection } from './hooks/useConnection';
-import {
-  formatPlayerName,
-  getQueryParams,
-  clearQueryParams,
-} from './utils/helpers';
+import { formatPlayerName, getQueryParams, clearQueryParams } from './utils/helpers';
 
 function App() {
   // UI state
@@ -97,7 +93,7 @@ function App() {
     if (queryParams.code && queryParams.code.length === 4) {
       setAutoJoinData({
         code: queryParams.code,
-        method: queryParams.method,
+        method: queryParams.method
       });
       setGamePhase('auto-join');
       // Clear query params from URL
@@ -134,30 +130,20 @@ function App() {
         }
       }
     },
-    [
-      makeMove,
-      makeLocalMove,
-      sendMessage,
-      simulateOpponentMove,
-      gameBoard,
-      isLocalGame,
-    ]
+    [makeMove, makeLocalMove, sendMessage, simulateOpponentMove, gameBoard, isLocalGame]
   );
 
   const handleHostGame = useCallback(async () => {
     await connectionHostGame(gameService);
-
+    
     // Start connection ready timer
     const connectionTimer = setTimeout(() => {
-      if (
-        status.type === 'success' &&
-        status.message.includes('Share the code')
-      ) {
+      if (status.type === 'success' && status.message.includes('Share the code')) {
         // Still waiting for connection, this is normal
         console.log('Waiting for player to join...');
       }
     }, 5000);
-
+    
     return () => clearTimeout(connectionTimer);
   }, [connectionHostGame, gameService, status]);
 
@@ -169,9 +155,9 @@ function App() {
         sendMessage({
           type: 'playerInfo',
           name: formatPlayerName(playerName, 'Guest'),
-          hostStarts: hostStarts,
+          hostStarts: hostStarts
         });
-
+        
         setOpponentName('Host Player');
         startGame();
       }, 1000);
@@ -180,7 +166,7 @@ function App() {
 
   const handleAutoJoin = useCallback(async () => {
     if (!autoJoinData) return;
-
+    
     const success = await autoJoinGame(autoJoinData.code, autoJoinData.method);
     if (success) {
       // Send player info after auto-joining
@@ -188,21 +174,14 @@ function App() {
         sendMessage({
           type: 'playerInfo',
           name: formatPlayerName(playerName, 'Guest'),
-          hostStarts: hostStarts,
+          hostStarts: hostStarts
         });
-
+        
         setOpponentName('Host Player');
         startGame();
       }, 1500);
     }
-  }, [
-    autoJoinGame,
-    autoJoinData,
-    sendMessage,
-    playerName,
-    hostStarts,
-    startGame,
-  ]);
+  }, [autoJoinGame, autoJoinData, sendMessage, playerName, hostStarts, startGame]);
 
   const handleDeclineAutoJoin = useCallback(() => {
     setAutoJoinData(null);
@@ -217,14 +196,7 @@ function App() {
       resetGame();
       assignPlayerSymbols(isHost, !hostStarts);
     }
-  }, [
-    sendMessage,
-    resetGame,
-    assignPlayerSymbols,
-    isHost,
-    hostStarts,
-    isLocalGame,
-  ]);
+  }, [sendMessage, resetGame, assignPlayerSymbols, isHost, hostStarts, isLocalGame]);
 
   const handleDisconnect = useCallback(() => {
     if (!isLocalGame) {
@@ -241,11 +213,7 @@ function App() {
 
   // Handle successful connection from host side
   useEffect(() => {
-    if (
-      isHost &&
-      status.type === 'success' &&
-      status.message.includes('Starting game')
-    ) {
+    if (isHost && status.type === 'success' && status.message.includes('Starting game')) {
       setTimeout(() => {
         setOpponentName('Guest Player');
         startGame();
@@ -278,7 +246,7 @@ function App() {
     if (isLocalGame) {
       return {
         name: formatPlayerName(playerName, 'Player 1'),
-        symbol: 'X',
+        symbol: 'X'
       };
     }
     return {
@@ -291,7 +259,7 @@ function App() {
     if (isLocalGame) {
       return {
         name: 'Player 2',
-        symbol: 'O',
+        symbol: 'O'
       };
     }
     return {
@@ -300,11 +268,9 @@ function App() {
     };
   };
 
-  console.log('Deployed commit:', import.meta.env.VITE_COMMIT_SHA);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-5">
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-5">
+      <div className="bg-white/15 backdrop-blur-lg rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/25">
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-3 drop-shadow-lg">
@@ -320,7 +286,7 @@ function App() {
           )}
 
           {gamePhase === 'playing' && isLocalGame && (
-            <div className="inline-block px-4 py-2 bg-purple-500/20 border border-purple-500/50 rounded-full text-sm mb-2">
+            <div className="inline-block px-4 py-2 bg-blue-500/25 border border-blue-400/50 rounded-full text-sm mb-2 text-white font-medium">
               🏠 Local Game
             </div>
           )}
@@ -388,13 +354,11 @@ function App() {
 
             {gameResult && (
               <div className="text-center p-4 bg-green-500/20 border border-green-500/50 rounded-xl">
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-white">
                   {gameResult.type === 'tie'
                     ? "🤝 It's a Tie!"
                     : isLocalGame
-                    ? `🎉 ${
-                        gameResult.winner === 'X' ? 'Player 1' : 'Player 2'
-                      } Wins!`
+                    ? `🎉 ${gameResult.winner === 'X' ? 'Player 1' : 'Player 2'} Wins!`
                     : gameResult.isPlayerWin
                     ? '🎉 You Win!'
                     : `😔 ${opponentName} Wins!`}
@@ -406,14 +370,14 @@ function App() {
               {gameEnded && (
                 <button
                   onClick={handleNewGame}
-                  className="flex-1 p-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 font-semibold transition-all"
+                  className="flex-1 p-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 font-semibold transition-all text-white"
                 >
                   New Game
                 </button>
               )}
               <button
                 onClick={handleDisconnect}
-                className="flex-1 p-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 font-semibold transition-all"
+                className="flex-1 p-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 font-semibold transition-all text-white"
               >
                 {isLocalGame ? 'Back to Menu' : 'Disconnect'}
               </button>
@@ -422,7 +386,7 @@ function App() {
         )}
 
         {/* Copyright */}
-        <div className="text-center mt-6 text-white/40 text-xs">
+        <div className="text-center mt-6 text-white/60 text-xs">
           © 2024 @relbns - Open Source
         </div>
       </div>
