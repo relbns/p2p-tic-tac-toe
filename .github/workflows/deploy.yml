@@ -10,8 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,5 +23,16 @@ jobs:
       - name: Set Commit SHA in .env
         run: echo "VITE_COMMIT_SHA=${GITHUB_SHA}" > .env
 
+      - name: Build project
+        run: npm run build
+
+      - name: Configure Git user
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
       - name: Deploy to GitHub Pages
-        run: npm run deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx gh-pages -d dist -u "github-actions[bot] <github-actions[bot]@users.noreply.github.com>" --repo=https://x-access-token:${GH_TOKEN}@github.com/relbns/p2p-tic-tac-toe.git
