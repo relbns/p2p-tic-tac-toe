@@ -171,6 +171,21 @@ export const useConnection = (onMessage) => {
     }
   }, [gameCode, selectedMethod, isHost]);
 
+  const retryConnection = useCallback(() => {
+  if (connectionService) {
+    // Reset connection attempts
+    connectionService.connectionAttempts = 0;
+    
+    if (isHosting && gameCode) {
+      // Retry hosting
+      connectionService.hostGame(gameCode);
+    } else if (isJoining && joinCode) {
+      // Retry joining
+      connectionService.joinGame(joinCode);
+    }
+  }
+}, [connectionService, isHosting, isJoining, gameCode, joinCode]);
+
   return {
     selectedMethod,
     isHost,
@@ -188,6 +203,7 @@ export const useConnection = (onMessage) => {
     disconnect,
     shareGameCode,
     setJoinCode,
-    connectionService
+    connectionService,
+    retryConnection
   };
 };

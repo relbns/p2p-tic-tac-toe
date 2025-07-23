@@ -130,6 +130,7 @@ function App() {
     shareGameCode,
     setJoinCode,
     connectionService,
+    retryConnection
   } = useConnection(handleMessage);
 
   // Store connection service reference
@@ -160,10 +161,25 @@ function App() {
   useEffect(() => {
     if (status.type === 'success' && status.message.includes('Connected')) {
       setIsConnected(true);
-    } else {
+    } else if (status.type === 'error' || status.message.includes('lost') || status.message.includes('Select a connection method')) {
+      // Reset connection status on error or disconnect
       setIsConnected(false);
     }
   }, [status]);
+
+  // Send player info once connected (for guest)
+  useEffect(() => {
+    if (isConnected && !isHostRef.current) {
+      console.log('Guest is connected, sending player info');
+      // Use timeout to ensure host is ready to receive
+      setTimeout(() => {
+        sendMessage({
+          type: 'playerInfo',
+          name: formatPlayerName(playerNameRef.current, 'Guest'),
+        });
+      }, 500); // Increased timeout for stability
+    }
+  }, [isConnected, sendMessage]);
 
   // Game actions
   const handleLocalGame = useCallback(() => {
@@ -201,39 +217,24 @@ function App() {
   }, [connectionHostGame, gameService]);
 
   const handleConnectToGame = useCallback(async () => {
-    const success = await connectToGame();
-    if (success) {
-      // Send player info immediately after connection is established
-      setTimeout(() => {
-        console.log('Guest sending player info');
-        sendMessage({
-          type: 'playerInfo',
-          name: formatPlayerName(playerName, 'Guest'),
-        });
-      }, 1000);
-    }
-  }, [connectToGame, sendMessage, playerName]);
+    await connectToGame();
+    // Message sending is now handled by the `isConnected` useEffect
+  }, [connectToGame]);
 
   const handleAutoJoin = useCallback(async () => {
     if (!autoJoinData) return;
-
-    const success = await autoJoinGame(autoJoinData.code, autoJoinData.method);
-    if (success) {
-      // Send player info after auto-joining
-      setTimeout(() => {
-        console.log('Auto-join guest sending player info');
-        sendMessage({
-          type: 'playerInfo',
-          name: formatPlayerName(playerName, 'Guest'),
-        });
-      }, 1500);
-    }
-  }, [autoJoinGame, autoJoinData, sendMessage, playerName]);
+    await autoJoinGame(autoJoinData.code, autoJoinData.method);
+    // Message sending is now handled by the `isConnected` useEffect
+  }, [autoJoinGame, autoJoinData]);
 
   const handleDeclineAutoJoin = useCallback(() => {
     setAutoJoinData(null);
     setGamePhase('setup');
   }, []);
+
+  const handleCancelConnection = useCallback(() => {
+    connectionDisconnect();
+  }, [connectionDisconnect]);
 
   const handleNewGame = useCallback(() => {
     if (isLocalGame) {
@@ -267,17 +268,8 @@ function App() {
     resetGame();
   }, [connectionDisconnect, resetGame, isLocalGame]);
 
-  // Handle successful connection from host side
-  useEffect(() => {
-    if (
-      isHost &&
-      status.type === 'success' &&
-      status.message.includes('Player connected')
-    ) {
-      console.log('Host detected player connection');
-      setIsConnected(true);
-    }
-  }, [isHost, status]);
+  // This effect is no longer needed as the generic `isConnected` state handles both host and guest.
+  // The old logic was flawed because it relied on a status message that changed.
 
   // Helper functions for display
   const getCurrentPlayer = () => {
@@ -381,6 +373,8 @@ function App() {
             status={status}
             isHosting={isHosting}
             isJoining={isJoining}
+            onCancel={handleCancelConnection}
+            onRetryConnection={retryConnection}
           />
         )}
 
@@ -449,7 +443,7 @@ function App() {
 
         {/* Copyright */}
         <div className="text-center mt-6 text-white/60 text-xs">
-          © 2024 @relbns - Open Source
+          © {new Date().getFullYear()} @relbns - Open Source
         </div>
       </div>
     </div>
