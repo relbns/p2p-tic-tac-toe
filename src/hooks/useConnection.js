@@ -5,6 +5,7 @@ import { generateShareUrl, showToast } from '../utils/helpers';
 
 export const useConnection = (onMessage) => {
   const [connectionService, setConnectionService] = useState(null);
+  const [selectedMethod, selectMethod] = useState('webrtc');
   const [isHost, setIsHost] = useState(false);
   const [isHosting, setIsHosting] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -12,7 +13,6 @@ export const useConnection = (onMessage) => {
   const [joinCode, setJoinCode] = useState('');
   const [status, setStatus] = useState({ message: 'Ready to play!', type: '' });
 
-  // Use ref to store the latest onMessage callback
   const onMessageRef = useRef(onMessage);
   useEffect(() => {
     onMessageRef.current = onMessage;
@@ -156,6 +156,8 @@ export const useConnection = (onMessage) => {
   }, [gameCode, isHost]);
 
   return {
+    selectedMethod,
+    selectMethod,
     isHost,
     isHosting,
     isJoining,

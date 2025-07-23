@@ -58,6 +58,14 @@ export const copyToClipboard = async (text) => {
 };
 
 // New functions for query parameter handling
+export const parseUrlParams = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return {
+    gameCode: urlParams.get('code')?.toUpperCase(),
+    method: urlParams.get('method')?.toLowerCase() || 'webrtc'
+  };
+};
+
 export const getQueryParams = () => {
   const urlParams = new URLSearchParams(window.location.search);
   return {

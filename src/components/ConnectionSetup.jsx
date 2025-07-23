@@ -79,8 +79,8 @@ const ConnectionSetup = ({
     <div
       className={`p-4 rounded-xl min-h-[60px] flex items-center justify-center border font-medium select-none
       ${
-        status.type === 'success'
-          ? 'bg-green-500/20 border-green-400/50 text-white'
+        status.type === 'hosting'
+          ? 'bg-blue-500/20 border-blue-400/50 text-white'
           : status.type === 'error'
           ? 'bg-red-500/20 border-red-400/50 text-white'
           : status.type === 'loading'
@@ -145,17 +145,6 @@ const ConnectionSetup = ({
         )}
       </div>
     )}
-
-    {/* WebRTC Info */}
-    <div className="text-center">
-      <div className="text-xs text-white/60 bg-white/5 rounded-lg p-3 border border-white/10">
-        <strong>WebRTC Features:</strong><br/>
-        • Direct peer-to-peer connection<br/>
-        • Works on most networks<br/>
-        • No servers required<br/>
-        • Share URL to invite friends
-      </div>
-    </div>
   </div>
 );
 

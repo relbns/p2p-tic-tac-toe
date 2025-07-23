@@ -265,7 +265,7 @@ export class ConnectionService {
       console.log('Connection opened successfully');
       this.isConnected = true;
       this.connectionAttempts = 0; // Reset attempts on success
-      this.onStatusChange('Connected! Starting game...', 'success');
+      this.onStatusChange('Player connected. Starting game...', 'success');
 
       // Send a ping to verify connection works
       setTimeout(() => {
