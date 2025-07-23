@@ -1,6 +1,6 @@
-// src/services/ConnectionService.js
+// src/services/ConnectionService.js - Improved for Cellular Networks
 export class ConnectionService {
-  constructor(onMessage, onStatusChange) {
+  constructor (onMessage, onStatusChange) {
     this.peer = null;
     this.connection = null;
     this.onMessage = onMessage;
@@ -11,14 +11,14 @@ export class ConnectionService {
     this.maxConnectionAttempts = 3;
   }
 
-  async loadPeerJS() {
+  async loadPeerJS () {
     if (window.Peer) return;
-    
+
     const cdnUrls = [
       'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js',
       'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js'
     ];
-    
+
     for (const url of cdnUrls) {
       try {
         await this.loadScript(url);
@@ -28,26 +28,26 @@ export class ConnectionService {
         continue;
       }
     }
-    
+
     throw new Error('Failed to load PeerJS library');
   }
 
-  loadScript(url) {
+  loadScript (url) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = url;
       script.onload = () => setTimeout(resolve, 100);
       script.onerror = reject;
       document.head.appendChild(script);
-      
+
       setTimeout(() => {
         if (!window.Peer) reject(new Error('Script load timeout'));
       }, 10000);
     });
   }
 
-  // Enhanced ICE servers configuration for better cellular support
-  getICEServers() {
+  // Enhanced ICE servers for better cellular support
+  getICEServers () {
     return [
       // Multiple STUN servers for redundancy
       { urls: 'stun:stun.l.google.com:19302' },
@@ -57,8 +57,8 @@ export class ConnectionService {
       { urls: 'stun:stun4.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' },
       { urls: 'stun:stun.twilio.com:3478' },
-      
-      // Multiple TURN servers for cellular networks
+
+      // TURN servers for cellular networks
       {
         urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
@@ -74,7 +74,7 @@ export class ConnectionService {
         username: 'openrelayproject',
         credential: 'openrelayproject'
       },
-      // Additional free TURN servers
+      // Additional TURN server
       {
         urls: 'turn:relay1.expressturn.com:3478',
         username: 'ef3GSRE4ZAvuwf1709',
@@ -84,7 +84,7 @@ export class ConnectionService {
   }
 
   // Enhanced peer configuration for cellular networks
-  getPeerConfig() {
+  getPeerConfig () {
     return {
       config: {
         iceServers: this.getICEServers(),
@@ -97,22 +97,22 @@ export class ConnectionService {
     };
   }
 
-  async hostGame(gameCode) {
+  async hostGame (gameCode) {
     try {
       await this.loadPeerJS();
       this.onStatusChange('Creating game room...', 'loading');
       this.isHost = true;
       this.connectionAttempts = 0;
-      
+
       await this.createPeer(gameCode);
-      
+
     } catch (error) {
       console.error('Host game error:', error);
       this.onStatusChange('Failed to create room: ' + error.message, 'error');
     }
   }
 
-  async createPeer(gameCode) {
+  async createPeer (gameCode) {
     return new Promise((resolve, reject) => {
       this.peer = new Peer(gameCode, this.getPeerConfig());
 
@@ -122,7 +122,7 @@ export class ConnectionService {
           this.peer.destroy();
           reject(new Error('Connection timeout. Try again.'));
         }
-      }, 30000); // Increased to 30 seconds
+      }, 30000); // 30 seconds
 
       this.peer.on('open', (id) => {
         clearTimeout(timeout);
@@ -139,7 +139,7 @@ export class ConnectionService {
         }
 
         console.log('Host: Incoming connection from:', conn.peer);
-        
+
         if (this.connection) {
           console.warn(`Host: Closing previous connection from ${this.connection.peer} to accept new one from ${conn.peer}.`);
           this.connection.close();
@@ -153,7 +153,7 @@ export class ConnectionService {
       this.peer.on('error', (err) => {
         clearTimeout(timeout);
         console.error('Host peer error:', err);
-        
+
         // Retry logic for cellular networks
         if (this.connectionAttempts < this.maxConnectionAttempts) {
           this.connectionAttempts++;
@@ -174,7 +174,7 @@ export class ConnectionService {
     });
   }
 
-  async joinGame(gameCode) {
+  async joinGame (gameCode) {
     try {
       await this.loadPeerJS();
       this.onStatusChange('Connecting to game...', 'loading');
@@ -182,14 +182,14 @@ export class ConnectionService {
       this.connectionAttempts = 0;
 
       await this.createGuestPeer(gameCode);
-      
+
     } catch (error) {
       console.error('Join game error:', error);
       this.onStatusChange('Failed to join: ' + error.message, 'error');
     }
   }
 
-  async createGuestPeer(gameCode) {
+  async createGuestPeer (gameCode) {
     return new Promise((resolve, reject) => {
       this.peer = new Peer(undefined, this.getPeerConfig());
 
@@ -199,19 +199,19 @@ export class ConnectionService {
           this.peer.destroy();
           reject(new Error('Connection timeout. Check the code.'));
         }
-      }, 30000); // Increased to 30 seconds
-      
+      }, 30000); // 30 seconds
+
       this.peer.on('open', (id) => {
         clearTimeout(timeout);
         console.log('Guest peer opened with ID:', id, 'connecting to:', gameCode);
-        
+
         // Enhanced connection options for cellular
-        this.connection = this.peer.connect(gameCode, { 
+        this.connection = this.peer.connect(gameCode, {
           reliable: true,
           serialization: 'json',
           metadata: { timestamp: Date.now() }
         });
-        
+
         this.setupConnection();
         resolve(id);
       });
@@ -219,7 +219,7 @@ export class ConnectionService {
       this.peer.on('error', (err) => {
         clearTimeout(timeout);
         console.error('Guest peer error:', err);
-        
+
         // Retry logic for cellular networks
         if (err.type === 'network' && this.connectionAttempts < this.maxConnectionAttempts) {
           this.connectionAttempts++;
@@ -243,7 +243,7 @@ export class ConnectionService {
     });
   }
 
-  setupConnection() {
+  setupConnection () {
     if (!this.connection) {
       console.error('No connection to setup');
       return;
@@ -266,7 +266,7 @@ export class ConnectionService {
       this.isConnected = true;
       this.connectionAttempts = 0; // Reset attempts on success
       this.onStatusChange('Connected! Starting game...', 'success');
-      
+
       // Send a ping to verify connection works
       setTimeout(() => {
         this.sendMessage({ type: 'ping', timestamp: Date.now() });
@@ -275,18 +275,18 @@ export class ConnectionService {
 
     this.connection.on('data', (data) => {
       console.log('Received data:', data);
-      
+
       // Handle ping/pong for connection health
       if (data.type === 'ping') {
         this.sendMessage({ type: 'pong', timestamp: data.timestamp });
         return;
       }
-      
+
       if (data.type === 'pong') {
         console.log('Connection health check passed');
         return;
       }
-      
+
       if (this.onMessage && this.isConnected) {
         this.onMessage(data);
       }
@@ -307,7 +307,7 @@ export class ConnectionService {
     });
   }
 
-  sendMessage(message) {
+  sendMessage (message) {
     if (this.connection && this.connection.open && this.isConnected) {
       console.log('Sending message:', message);
       try {
@@ -328,27 +328,27 @@ export class ConnectionService {
   }
 
   // Health check method
-  checkConnectionHealth() {
+  checkConnectionHealth () {
     if (this.isConnected) {
       this.sendMessage({ type: 'ping', timestamp: Date.now() });
     }
   }
 
-  disconnect() {
+  disconnect () {
     console.log('Disconnecting...');
     this.isConnected = false;
     this.connectionAttempts = 0;
-    
+
     if (this.connection) {
       this.connection.close();
       this.connection = null;
     }
-    
+
     if (this.peer) {
       this.peer.destroy();
       this.peer = null;
     }
-    
+
     this.isHost = false;
   }
 }
