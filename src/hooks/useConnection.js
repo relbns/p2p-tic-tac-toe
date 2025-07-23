@@ -1,19 +1,18 @@
-// src/hooks/useConnection.js
+// src/hooks/useConnection.js - Restored WebRTC Hook
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConnectionService } from '../services/ConnectionService';
 import { generateShareUrl, showToast } from '../utils/helpers';
 
 export const useConnection = (onMessage) => {
   const [connectionService, setConnectionService] = useState(null);
-  const [selectedMethod, setSelectedMethod] = useState(null);
+  const [selectedMethod, selectMethod] = useState('webrtc');
   const [isHost, setIsHost] = useState(false);
   const [isHosting, setIsHosting] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [gameCode, setGameCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [status, setStatus] = useState({ message: 'Select a connection method above', type: '' });
+  const [status, setStatus] = useState({ message: 'Ready to play!', type: '' });
 
-  // Use ref to store the latest onMessage callback without causing re-renders
   const onMessageRef = useRef(onMessage);
   useEffect(() => {
     onMessageRef.current = onMessage;
@@ -43,11 +42,6 @@ export const useConnection = (onMessage) => {
     return () => {
       service.disconnect();
     };
-  }, []); // Remove onMessage from dependencies
-
-  const selectMethod = useCallback((method) => {
-    setSelectedMethod(method);
-    setStatus({ message: `${method.toUpperCase()} selected. Choose host or join.`, type: '' });
   }, []);
 
   const hostGame = useCallback(async (gameService) => {
@@ -55,14 +49,11 @@ export const useConnection = (onMessage) => {
     setIsHosting(true);
     const code = gameService.generateGameCode();
     setGameCode(code);
-    
-    if (selectedMethod === 'webrtc' && connectionService) {
+
+    if (connectionService) {
       await connectionService.hostGame(code);
-    } else {
-      // Simulate for other methods
-      setStatus({ message: 'Game room created! Share the code.', type: 'success' });
     }
-  }, [selectedMethod, connectionService]);
+  }, [connectionService]);
 
   const joinGame = useCallback(() => {
     setIsHost(false);
@@ -79,32 +70,26 @@ export const useConnection = (onMessage) => {
     // Store the game code for guests too
     setGameCode(code);
 
-    if (selectedMethod === 'webrtc' && connectionService) {
+    if (connectionService) {
       await connectionService.joinGame(code);
       return true;
-    } else {
-      // Simulate for other methods
-      setStatus({ message: 'Joining game...', type: 'loading' });
-      return true;
     }
-  }, [joinCode, selectedMethod, connectionService]);
+    return false;
+  }, [joinCode, connectionService]);
 
   const autoJoinGame = useCallback(async (code, method) => {
-    setSelectedMethod(method);
     setIsHost(false);
     setIsJoining(true);
     setJoinCode(code);
-    
+
     // Store the game code for auto-join guests too
     setGameCode(code);
-    
-    if (method === 'webrtc' && connectionService) {
+
+    if (connectionService) {
       await connectionService.joinGame(code);
       return true;
-    } else {
-      setStatus({ message: 'Joining game...', type: 'loading' });
-      return true;
     }
+    return false;
   }, [connectionService]);
 
   const sendMessage = useCallback((message) => {
@@ -118,19 +103,18 @@ export const useConnection = (onMessage) => {
     if (connectionService) {
       connectionService.disconnect();
     }
-    
+
     // Reset connection state
-    setSelectedMethod(null);
     setIsHost(false);
     setIsHosting(false);
     setIsJoining(false);
     setGameCode('');
     setJoinCode('');
-    setStatus({ message: 'Select a connection method above', type: '' });
+    setStatus({ message: 'Ready to play!', type: '' });
   }, [connectionService]);
 
   const shareGameCode = useCallback(async () => {
-    if (!gameCode || !selectedMethod) {
+    if (!gameCode) {
       showToast('No game code to share', 'error');
       return;
     }
@@ -141,9 +125,9 @@ export const useConnection = (onMessage) => {
       return;
     }
 
-    const shareUrl = generateShareUrl(gameCode, selectedMethod);
+    const shareUrl = generateShareUrl(gameCode, 'webrtc');
     const shareText = `Join my Tic Tac Toe game!\nCode: ${gameCode}\n${shareUrl}`;
-    
+
     try {
       if (navigator.share) {
         await navigator.share({
@@ -169,17 +153,17 @@ export const useConnection = (onMessage) => {
       console.error('Failed to share:', error);
       showToast('Failed to share game', 'error');
     }
-  }, [gameCode, selectedMethod, isHost]);
+  }, [gameCode, isHost]);
 
   return {
     selectedMethod,
+    selectMethod,
     isHost,
     isHosting,
     isJoining,
     gameCode,
     joinCode,
     status,
-    selectMethod,
     hostGame,
     joinGame,
     connectToGame,

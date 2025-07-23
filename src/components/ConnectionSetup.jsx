@@ -1,9 +1,7 @@
-// src/components/ConnectionSetup.jsx
+// src/components/ConnectionSetup.jsx - WebRTC Only
 import React from 'react';
 
 const ConnectionSetup = ({
-  selectedMethod,
-  onMethodSelect,
   onHost,
   onJoin,
   playerName,
@@ -17,6 +15,7 @@ const ConnectionSetup = ({
   isJoining,
   onLocalGame,
   onShareCode,
+  onCancel,
 }) => (
   <div className="space-y-6">
     <input
@@ -47,42 +46,41 @@ const ConnectionSetup = ({
       </div>
 
       <div className="text-center text-white/70 text-sm mb-4 font-medium select-none">
-        OR connect with remote players:
+        OR play online with friends:
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        {[
-          { id: 'webrtc', label: '🌐 WebRTC', subtitle: 'Internet Required' },
-          { id: 'bluetooth', label: '📶 Bluetooth', subtitle: 'No Internet' },
-          {
-            id: 'hotspot',
-            label: '📡 WiFi Hotspot',
-            subtitle: 'Local Network',
-          },
-          { id: 'qr', label: '📱 QR Code', subtitle: 'Pass & Play' },
-        ].map((method) => (
-          <button
-            key={method.id}
-            onClick={() => onMethodSelect(method.id)}
-            className={`p-4 rounded-xl font-semibold transition-all backdrop-blur border text-center select-none
-              ${
-                selectedMethod === method.id
-                  ? 'bg-green-500/30 border-green-400/60 text-white'
-                  : 'bg-white/15 border-white/30 hover:bg-white/25 text-white'
-              }`}
-          >
-            <div>{method.label}</div>
-            <div className="text-xs opacity-75">{method.subtitle}</div>
-          </button>
-        ))}
+      {/* WebRTC Online Game */}
+      <div className="mb-5">
+        <div className="p-4 rounded-xl bg-white/10 border border-white/25 text-center">
+          <div className="text-lg font-semibold text-white mb-2">🌐 Online Multiplayer</div>
+          <div className="text-sm text-white/80 mb-3">Direct P2P connection via WebRTC</div>
+          
+          {!isHosting && !isJoining && (
+            <div className="flex gap-3">
+              <button
+                onClick={onHost}
+                className="flex-1 p-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 font-semibold transition-all backdrop-blur border border-green-500/50 text-white select-none"
+              >
+                Host Game
+              </button>
+              <button
+                onClick={onJoin}
+                className="flex-1 p-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 font-semibold transition-all backdrop-blur border border-blue-500/50 text-white select-none"
+              >
+                Join Game
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
 
+    {/* Status Display */}
     <div
       className={`p-4 rounded-xl min-h-[60px] flex items-center justify-center border font-medium select-none
       ${
-        status.type === 'success'
-          ? 'bg-green-500/20 border-green-400/50 text-white'
+        status.type === 'hosting'
+          ? 'bg-blue-500/20 border-blue-400/50 text-white'
           : status.type === 'error'
           ? 'bg-red-500/20 border-red-400/50 text-white'
           : status.type === 'loading'
@@ -93,26 +91,10 @@ const ConnectionSetup = ({
       {status.type === 'loading' && (
         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-3"></div>
       )}
-      {status.message}
+      {status.message || 'Ready to play!'}
     </div>
 
-    {selectedMethod && !isHosting && !isJoining && (
-      <div className="flex gap-3">
-        <button
-          onClick={onHost}
-          className="flex-1 p-3 rounded-xl bg-white/20 hover:bg-white/30 font-semibold transition-all backdrop-blur border border-white/30 text-white select-none"
-        >
-          Host Game
-        </button>
-        <button
-          onClick={onJoin}
-          className="flex-1 p-3 rounded-xl bg-white/20 hover:bg-white/30 font-semibold transition-all backdrop-blur border border-white/30 text-white select-none"
-        >
-          Join Game
-        </button>
-      </div>
-    )}
-
+    {/* Host Interface */}
     {isHosting && (
       <div className="text-center space-y-4">
         <p className="text-lg text-white font-medium select-none">
@@ -134,6 +116,7 @@ const ConnectionSetup = ({
       </div>
     )}
 
+    {/* Join Interface */}
     {isJoining && (
       <div className="space-y-4">
         <input
@@ -147,10 +130,19 @@ const ConnectionSetup = ({
         />
         <button
           onClick={onConnect}
-          className="w-full p-3 rounded-xl bg-white/20 hover:bg-white/30 font-semibold transition-all backdrop-blur border border-white/30 text-white select-none"
+          disabled={status.type === 'loading'}
+          className="w-full p-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 font-semibold transition-all backdrop-blur border border-green-500/50 text-white select-none disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Connect
+          {status.type === 'loading' ? 'Connecting...' : 'Connect'}
         </button>
+        {status.type === 'loading' && (
+          <button
+            onClick={onCancel}
+            className="w-full p-3 mt-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 font-semibold transition-all backdrop-blur border border-red-500/50 text-white select-none"
+          >
+            Cancel
+          </button>
+        )}
       </div>
     )}
   </div>

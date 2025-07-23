@@ -158,7 +158,7 @@ function App() {
 
   // Monitor connection status
   useEffect(() => {
-    if (status.type === 'success' && status.message.includes('Connected')) {
+    if (status.type === 'success' && status.message.includes('Player connected')) {
       setIsConnected(true);
     } else {
       setIsConnected(false);
@@ -278,6 +278,14 @@ function App() {
       setIsConnected(true);
     }
   }, [isHost, status]);
+
+  // Handle disconnection
+  useEffect(() => {
+    if (gamePhase === 'playing' && status.type === 'error' && status.message.includes('Connection lost')) {
+      alert('Opponent has disconnected. Returning to menu.');
+      handleDisconnect();
+    }
+  }, [status, gamePhase, handleDisconnect]);
 
   // Helper functions for display
   const getCurrentPlayer = () => {
@@ -449,7 +457,7 @@ function App() {
 
         {/* Copyright */}
         <div className="text-center mt-6 text-white/60 text-xs">
-          © 2024 @relbns - Open Source
+          © {new Date().getFullYear()} @relbns - Open Source
         </div>
       </div>
     </div>
