@@ -56,7 +56,7 @@ export const useConnection = (onMessage) => {
     const code = gameService.generateGameCode();
     setGameCode(code);
     
-    if (selectedMethod === 'webrtc' && connectionService) {
+    if ((selectedMethod === 'webrtc' || selectedMethod === 'hotspot') && connectionService) {
       await connectionService.hostGame(code);
     } else {
       // Simulate for other methods
@@ -79,7 +79,7 @@ export const useConnection = (onMessage) => {
     // Store the game code for guests too
     setGameCode(code);
 
-    if (selectedMethod === 'webrtc' && connectionService) {
+    if ((selectedMethod === 'webrtc' || selectedMethod === 'hotspot') && connectionService) {
       await connectionService.joinGame(code);
       return true;
     } else {
@@ -98,7 +98,7 @@ export const useConnection = (onMessage) => {
     // Store the game code for auto-join guests too
     setGameCode(code);
     
-    if (method === 'webrtc' && connectionService) {
+    if ((method === 'webrtc' || method === 'hotspot') && connectionService) {
       await connectionService.joinGame(code);
       return true;
     } else {

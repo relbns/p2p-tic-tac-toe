@@ -13,7 +13,78 @@
   <meta name="description" content="TicTacToe Multiplayer WebGame" />
   <meta name="keywords" content="TicTacToe" />
   <title>TicTacToe</title>
-</head>
+<!-- PWA Meta Tags -->
+    <meta name="description" content="Play Tic Tac Toe with friends online or locally - works on all devices!" />
+    <meta name="theme-color" content="#3b82f6" />
+    
+    <!-- NetplayJS - Try multiple CDNs -->
+    <script>
+      console.log('Loading NetplayJS...');
+      
+      // Function to load NetplayJS from multiple sources
+      async function loadNetplayJS() {
+        const sources = [
+          'https://unpkg.com/netplayjs@0.4.1/dist/netplay.js',
+          'https://cdn.jsdelivr.net/npm/netplayjs@0.4.1/dist/netplay.js',
+          'https://unpkg.com/netplayjs@latest/dist/netplay.js'
+        ];
+        
+        for (const src of sources) {
+          try {
+            console.log(`Attempting to load NetplayJS from: ${src}`);
+            await loadScript(src);
+            
+            if (window.netplayjs) {
+              console.log('✅ NetplayJS loaded successfully from:', src);
+              console.log('Available classes:', Object.keys(window.netplayjs));
+              return true;
+            }
+          } catch (error) {
+            console.warn(`Failed to load from ${src}:`, error);
+          }
+        }
+        
+        console.error('❌ Failed to load NetplayJS from all sources');
+        return false;
+      }
+      
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+      
+      // Load NetplayJS before React app starts
+      window.addEventListener('DOMContentLoaded', async () => {
+        const loaded = await loadNetplayJS();
+        
+        if (!loaded) {
+          // Show error message if NetplayJS fails to load
+          document.body.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 20px;">
+              <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; max-width: 400px;">
+                <h1>❌ Loading Error</h1>
+                <p>NetplayJS failed to load. This could be due to:</p>
+                <ul style="text-align: left; margin: 20px 0;">
+                  <li>Network connectivity issues</li>
+                  <li>CDN being blocked</li>
+                  <li>Firewall restrictions</li>
+                </ul>
+                <p>Please check your internet connection and try refreshing the page.</p>
+                <button onclick="location.reload()" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin-top: 10px;">
+                  🔄 Retry
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      });
+    </script>
+  </head>
 
 <body>
   <div id="root"></div>
