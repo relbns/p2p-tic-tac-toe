@@ -279,6 +279,14 @@ function App() {
     }
   }, [isHost, status]);
 
+  // Handle disconnection
+  useEffect(() => {
+    if (gamePhase === 'playing' && status.type === 'error' && status.message.includes('Connection lost')) {
+      alert('Opponent has disconnected. Returning to menu.');
+      handleDisconnect();
+    }
+  }, [status, gamePhase, handleDisconnect]);
+
   // Helper functions for display
   const getCurrentPlayer = () => {
     if (gameEnded) return 0;
